@@ -84,11 +84,10 @@ extern uint32_t tos_console;
 extern uint32_t tos_user;
 
 
-void init_mutex(){
+void init_semaphore(){
   for(int i =0; i<20;i++){
-    sem[i]->status = 1; //sead to open
-    sem[i]->process = 0; //no owner atm
-    sem[i]->data = 1;
+    sem[i]->process = 0; //assign an owner (non at the moment)
+    sem[i]->data = 1; //assign the data value, could be moved to SEM_OPEN
   }
 }
 
@@ -96,7 +95,7 @@ void hilevel_handler_rst( ctx_t* ctx ) {
 
   PL011_putc( UART0, 'R', true );
 
-  init_mutex();
+  init_semaphore(); //similar to sem_init
 
    for(int i=0;i<MAX_PROCS;i++){  //create all processes
    
@@ -281,36 +280,37 @@ void hilevel_handler_svc(ctx_t* ctx, uint32_t id) {
 
     }
 
-    case 0x08 : { // 0x08 => sem_read()    //rename
+    case 0x08 : { // 0x08 => sem_open(int pid, int x)    //initialise semaphore value and link with process
       int pid = ctx->gpr[0]-3;
       int data = ctx->gpr[1];
       int result = 0;
       
-        if(sem[pid]->data == 1 || sem[pid]->process == 0){  //each process must check whether that data is available to them
-          result = 1; 
-          sem[pid]->process = executing->pid;   //if available,assign that data to itself
+        if(sem[pid]->data == 1 || sem[pid]->process == 0){  //each process must check whether that data is available to them  
+          result = 0;  //change to 0
+          sem[pid]->process = executing->pid;   //if available,assign that process to that semaphore
+          //if anything breaks, add a sem[pid]->data = 1
         }
         else{
           
-          result = -1;  //else no data
+          result = -1;  //error
         }
       ctx->gpr[0] = result; //return result
     
       break;
     }
 
-    case 0x09 : { // 0x09 => sem_write()   //Essentially, here we are allowing a process to read that semaphore value
+    case 0x09 : { // 0x09 => sem_post(int pid,int x)   //Essentially, here we are allowing a process to read that semaphore value, similar to sem_post
       int pid = ctx->gpr[0]-3;  //minus 3 because it would start from sem[3] rather than sem[0] 
       int data = ctx->gpr[1];
       int result = 0;
 
       if(sem[pid]->process == executing->pid){   //if process is assigned to the data slot, allow it to write
-        sem[pid]->data = data;
-        result = data;
+        sem[pid]->data++; //increments value
+        result = 0;
         
       }
       else{
-        result = -1;
+        result = -1; //error
       }
 
 
@@ -318,7 +318,7 @@ void hilevel_handler_svc(ctx_t* ctx, uint32_t id) {
       break;
     }
 
-    case 0x10 : { //0x10 => sem_close()   //Here, we are essentially closing the semaphore && unlinking it from the process it was assigned to
+    case 0x10 : { //0x10 => sem_close(int pid)   //Here, we are essentially closing the semaphore && unlinking it from the process it was assigned to
    // PL011_putc( UART0, 'E', true );
       int pid = ctx->gpr[0]-3;
       int result = 0;   //need to return error
@@ -329,6 +329,28 @@ void hilevel_handler_svc(ctx_t* ctx, uint32_t id) {
 
        ctx->gpr[0] = result;
        break;
+    }
+
+    case 0x11 : { //0x11 sem_wait(int pid)
+
+      int pid = ctx->gpr[0]-3;  //minus 3 because it would start from sem[3] rather than sem[0] 
+      int result = 0;
+
+      if(sem[pid]->process == executing->pid){   //if process is assigned to the data slot, allow it to write
+
+        if(sem[pid]->data > 0){
+          sem[pid]->data--;
+          result = 0;
+        }
+        else{
+          result = -1;
+        }
+      }
+      else{
+        result = -1; //error
+      }
+      ctx->gpr[0] = result;
+      break;
     }
 
 

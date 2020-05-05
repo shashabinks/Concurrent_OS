@@ -56,7 +56,6 @@ typedef struct {
 } pcb_t;
 
 typedef struct{
-  int status;
   int data;
   int process;
 }sem_t;

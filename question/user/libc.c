@@ -61,30 +61,30 @@ void yield() {
   return;
 }
 
-int sem_write( int pid, int d) { 
+int sem_post( int pid, int d) { 
   int r;
 
   asm volatile( "mov r0, %2 \n" // assign r0 =  pid
                 "mov r1, %3 \n" // assign r1 =    d
-                "svc %1     \n" // make system call SYS_WRITE
+                "svc %1     \n" // make system call SEM_POST
                 "mov %0, r0 \n" // assign r0 =    r
               : "=r" (r) 
-              : "I" (SEM_WRITE), "r" (pid), "r" (d)
+              : "I" (SEM_POST), "r" (pid), "r" (d)
               : "r0", "r1" );
 
   return r;
 }
 
 
-int sem_read( int pid, int d) { 
+int sem_open( int pid, int d) { 
   int r;
 
   asm volatile( "mov r0, %2 \n" // assign r0 =  pid
                 "mov r1, %3 \n" // assign r1 =    d
-                "svc %1     \n" // make system call SYS_READ
+                "svc %1     \n" // make system call SEM_OPEN
                 "mov %0, r0 \n" // assign r0 =    r
               : "=r" (r) 
-              : "I" (SEM_READ), "r" (pid), "r" (d)
+              : "I" (SEM_OPEN), "r" (pid), "r" (d)
               : "r0", "r1" );
 
   return r;
@@ -96,10 +96,24 @@ int sem_close( int pid) {
 
   asm volatile( "mov r0, %2 \n" // assign r0 =  pid
                 
-                "svc %1     \n" // make system call SYS_WRITE
+                "svc %1     \n" // make system call SEM_CLOSE
                 "mov %0, r0 \n" // assign r0 =    r
               : "=r" (r) 
               : "I" (SEM_CLOSE), "r" (pid)
+              : "r0" );
+
+  return r;
+}
+
+int sem_wait(int pid) { 
+   int r;
+
+  asm volatile( "mov r0, %2 \n" // assign r0 =  pid
+                
+                "svc %1     \n" // make system call SEM_WAIT
+                "mov %0, r0 \n" // assign r0 =    r
+              : "=r" (r) 
+              : "I" (SEM_WAIT), "r" (pid)
               : "r0" );
 
   return r;
@@ -192,36 +206,6 @@ void nice( int pid, int x ) {
   return;
 }
 
-void sem_post (const void * x ) {               //increment semaphore value
-    asm volatile("ldrex r1, [ %0 ] \n"          //s'= MEM[ &s ]
-                 "add    r1, r1, #1 \n"         //s'= s'+ 1
-                 "strex r2, r1, [ %0 ] \n"      //r <= MEM[ &s ] = s'
-                 "cmp    r2, #0 \n"             // r  ?= 0
-                 "bne    sem_post \n"           //if r  != 0, retry
-                 "dmb \n"                       //memory barrier
-                 "bx     lr \n"                 //return
-                 :
-                 :"r" (x)
-                 :"r0", "r1", "r2");
 
-  return;
-}
-
-void sem_wait(const void * x ) {                //decrement semaphore value, block if necessary
-    asm volatile("ldrex r1, [ %0 ] \n"          //s'= MEM[ &s ]
-                 "cmp    r1, #0 \n"             //s'?= 0
-                 "beq    sem_wait \n"           //if s'== 0, retry
-                 "sub    r1, r1, #1 \n"         //s'= s'- 1
-                 "strex r2, r1, [ %0 ] \n"      //r <= MEM[ &s ] = s'
-                 "cmp    r2, #0 \n"             // r  ?= 0
-                 "bne    sem_wait \n"           //if r  != 0, retry
-                 "dmb \n"                       //memory barrier
-                 "bx     lr \n"                 //return
-                 :
-                 :"r" (x)
-                 :"r0", "r1", "r2");
-
-  return;
-}
 
 

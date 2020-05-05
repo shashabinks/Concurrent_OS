@@ -38,9 +38,10 @@ typedef int pid_t;
 #define SYS_EXEC      ( 0x05 )
 #define SYS_KILL      ( 0x06 )
 #define SYS_NICE      ( 0x07 )
-#define SEM_READ      ( 0x08 )
-#define SEM_WRITE     ( 0x09 )
+#define SEM_OPEN      ( 0x08 )
+#define SEM_POST      ( 0x09 )
 #define SEM_CLOSE     ( 0x10 )
+#define SEM_WAIT      ( 0x11 )
 
 #define SIG_TERM      ( 0x00 )
 #define SIG_QUIT      ( 0x01 )
@@ -72,18 +73,16 @@ extern void exit(       int   x );
 // perform exec, i.e., start executing program at address x
 extern void exec( const void* x );
 
-extern int sem_write(int pid, int d);
-extern int sem_read(int pid, int d);
+extern int sem_post(int pid, int d);
+extern int sem_open(int pid, int d);
 extern int sem_close(int pid);
+extern int sem_wait(int pid);
 
 // for process identified by pid, send signal of x
 extern int  kill( pid_t pid, int x );
 // for process identified by pid, set  priority to x
 extern void nice( pid_t pid, int x );
 
-//increment semaphore value
-extern void sem_post( const void* x );
-//decrement semaphore value
-extern void sem_wait( const void* x );
+
 
 #endif
