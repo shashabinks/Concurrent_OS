@@ -91,16 +91,16 @@ int sem_read( int pid, int d) {
 }
 
 
-int sem_close( int pid, int d) { 
+int sem_close( int pid) { 
    int r;
 
   asm volatile( "mov r0, %2 \n" // assign r0 =  pid
-                "mov r1, %3 \n" // assign r1 =    d
+                
                 "svc %1     \n" // make system call SYS_WRITE
                 "mov %0, r0 \n" // assign r0 =    r
               : "=r" (r) 
-              : "I" (SEM_CLOSE), "r" (pid), "r" (d)
-              : "r0", "r1" );
+              : "I" (SEM_CLOSE), "r" (pid)
+              : "r0" );
 
   return r;
 }

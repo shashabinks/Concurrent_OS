@@ -12,7 +12,7 @@ pcb_t procTab[MAX_PROCS];
 pcb_t* executing = NULL;
 
 extern uint32_t tos_semaphore;
-sem_t (*mutexes)[30] = (void *)&tos_semaphore; //needs to be renamed to semaphores
+sem_t (*sem)[20] = (void *)&tos_semaphore; //needs to be renamed to semaphores
 
 void dispatch( ctx_t* ctx, pcb_t* prev, pcb_t* next ) {
   char prev_pid = '?', next_pid = '?';
@@ -86,9 +86,9 @@ extern uint32_t tos_user;
 
 void init_mutex(){
   for(int i =0; i<20;i++){
-    mutexes[i]->status = 1; //sead to open
-    mutexes[i]->process = 0; //no owner atm
-    mutexes[i]->data = 1;
+    sem[i]->status = 1; //sead to open
+    sem[i]->process = 0; //no owner atm
+    sem[i]->data = 1;
   }
 }
 
@@ -286,13 +286,13 @@ void hilevel_handler_svc(ctx_t* ctx, uint32_t id) {
       int data = ctx->gpr[1];
       int result = 0;
       
-        if(mutexes[pid]->data == 1 || mutexes[pid]->process == 0){  //each process must check whether that data is available to them
+        if(sem[pid]->data == 1 || sem[pid]->process == 0){  //each process must check whether that data is available to them
           result = 1; 
-          mutexes[pid]->process = executing->pid;   //if available,assign that data to itself
+          sem[pid]->process = executing->pid;   //if available,assign that data to itself
         }
         else{
           
-          result = 0;  //else no data
+          result = -1;  //else no data
         }
       ctx->gpr[0] = result; //return result
     
@@ -304,13 +304,13 @@ void hilevel_handler_svc(ctx_t* ctx, uint32_t id) {
       int data = ctx->gpr[1];
       int result = 0;
 
-      if(mutexes[pid]->process == executing->pid){   //if process is assigned to the data slot, allow it to write
-        mutexes[pid]->data = data;
+      if(sem[pid]->process == executing->pid){   //if process is assigned to the data slot, allow it to write
+        sem[pid]->data = data;
         result = data;
         
       }
       else{
-        result = 0;
+        result = -1;
       }
 
 
@@ -321,11 +321,10 @@ void hilevel_handler_svc(ctx_t* ctx, uint32_t id) {
     case 0x10 : { //0x10 => sem_close()   //Here, we are essentially closing the semaphore && unlinking it from the process it was assigned to
    // PL011_putc( UART0, 'E', true );
       int pid = ctx->gpr[0]-3;
-      int data = ctx->gpr[1];
       int result = 0;   //need to return error
 
-      mutexes[pid]->process = 0; //unassign a process to that slot
-      mutexes[pid]->data = 1;    //reset the resources
+      sem[pid]->process = 0; //unassign a process to that slot
+      sem[pid]->data = 1;    //reset the resources
       result = 1;
 
        ctx->gpr[0] = result;

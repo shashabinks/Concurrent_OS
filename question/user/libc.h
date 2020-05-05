@@ -74,7 +74,7 @@ extern void exec( const void* x );
 
 extern int sem_write(int pid, int d);
 extern int sem_read(int pid, int d);
-extern int sem_close(int pid, int d);
+extern int sem_close(int pid);
 
 // for process identified by pid, send signal of x
 extern int  kill( pid_t pid, int x );

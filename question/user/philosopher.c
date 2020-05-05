@@ -5,8 +5,6 @@
 
 #define NUM_PHILOSOPHERS 16
 
-// Shared Memory 
-int forks[NUM_PHILOSOPHERS] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};  // each value in array changes between 1 and 0 depending on whether that fork is available
 int fork_lock = 1;  //mutex lock
 
 bool free_forks(int left, int right){
@@ -64,7 +62,6 @@ void main_philosopher(){
                 
                    sem_write(left+3,0); //write
                    sem_write(right+3,0);
-
                    
                     write( STDOUT_FILENO, "P", 1);
                     write( STDOUT_FILENO, phil, 2);
@@ -99,8 +96,9 @@ void main_philosopher(){
                     
                 }
 
-                sem_close(left+3,1);
-                sem_close(right+3,1);
+                sem_close(left+3); //close & unlink semaphore values
+                sem_close(right+3);
+
                 //release lock
                 sem_post(&fork_lock); // allow other processes to resume
                 write( STDOUT_FILENO, "P", 1);
